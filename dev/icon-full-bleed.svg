@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Source for the PNG icons (iOS rounds the corners itself). Regenerate with dev/make-icons.sh -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0628f"/>
+      <stop offset="1" stop-color="#b3245c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect x="128" y="146" width="256" height="236" rx="40" fill="#fff"/>
+  <path d="M128 186a40 40 0 0 1 40-40h176a40 40 0 0 1 40 40v26H128z" fill="#ffd1df"/>
+  <rect x="186" y="118" width="26" height="62" rx="13" fill="#7a1640"/>
+  <rect x="300" y="118" width="26" height="62" rx="13" fill="#7a1640"/>
+  <path d="M198 292l38 38 80-84" fill="none" stroke="#d6336c" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

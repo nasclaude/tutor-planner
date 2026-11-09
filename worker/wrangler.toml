@@ -1,0 +1,28 @@
+name = "tutor-planner-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Check for due reminders every minute.
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tutor-planner"
+database_id = "4e3d62d8-7138-4065-9d62-e0ab76e0b55a"
+migrations_dir = "migrations"
+
+[vars]
+# The GitHub Pages site (and local dev) allowed to call this API.
+ALLOWED_ORIGINS = "https://nasclaude.github.io,http://localhost:8080"
+# Contact URL sent to the push services (Apple requires an https: or mailto: value).
+VAPID_SUBJECT = "https://nasclaude.github.io/tutor-planner/"
+
+# Secrets (set with `npx wrangler secret put NAME`, never committed):
+#   SETUP_CODE         one-time code for creating the owner account on first launch
+#   SESSION_SECRET     random string used to sign login tokens (change it to log everyone out)
+#   PASSWORD_PEPPER    random string mixed into stored passwords; never change it once people have joined
+#   VAPID_PRIVATE_JWK  push notification key (npm run vapid generates one)
+
+[observability]
+enabled = true

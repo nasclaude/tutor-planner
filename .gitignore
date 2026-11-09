@@ -1,0 +1,8 @@
+node_modules/
+.wrangler/
+.dev.vars
+.DS_Store
+
+# local preview data and keys
+dev/dev.db*
+dev/.vapid.json

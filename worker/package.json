@@ -1,0 +1,16 @@
+{
+  "name": "tutor-planner-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --no-warnings --test test/*.test.mjs",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply tutor-planner --remote",
+    "vapid": "node scripts/generate-vapid.mjs",
+    "logs": "wrangler tail"
+  },
+  "devDependencies": {
+    "http_ece": "^1.2.1",
+    "wrangler": "^4.158.0"
+  }
+}
