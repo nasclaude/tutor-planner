@@ -5,6 +5,7 @@ import { listAll, createRow, createSeries, updateRow, deleteRow } from './crud.j
 import { getSettings, updateSettings } from './settings.js';
 import { getVapid, isPushEndpoint, sendToDevices, countDevices } from './push.js';
 import { runReminders, testMessage } from './reminders.js';
+import { summaryFor, unmarkedCount } from './summary.js';
 
 function corsHeaders(env, origin) {
   const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -55,10 +56,16 @@ async function unsubscribe(request, env, user) {
   return json({ ok: true, devices: await countDevices(env, user.id) });
 }
 
-async function testPush(request, env, user) {
+// A test notification, or (kind "summary") today's morning summary right now, to this device.
+async function testPush(request, env, user, kind = 'test') {
   const { endpoint } = await readJson(request);
-  const { language } = await getSettings(env, user.id);
-  const report = await sendToDevices(env, user.id, testMessage(language), { endpoint: endpoint || undefined, ttl: 300 });
+  const settings = await getSettings(env, user.id);
+  const now = Date.now();
+  const payload =
+    kind === 'summary'
+      ? (await summaryFor(env, user.id, now, settings)).payload
+      : { ...testMessage(settings.language), badge: settings.app_badge ? await unmarkedCount(env, user.id, now) : undefined };
+  const report = await sendToDevices(env, user.id, payload, { endpoint: endpoint || undefined, ttl: 300 });
   if (!report.sent && !report.failed) {
     throw new HttpError(400, 'This device is not registered for notifications yet', 'no_device');
   }
@@ -87,6 +94,7 @@ async function route(request, env) {
   if (path === '/api/push/subscribe' && method === 'POST') return subscribe(request, env, user);
   if (path === '/api/push/unsubscribe' && method === 'POST') return unsubscribe(request, env, user);
   if (path === '/api/push/test' && method === 'POST') return testPush(request, env, user);
+  if (path === '/api/push/summary' && method === 'POST') return testPush(request, env, user, 'summary');
 
   // The owner's People screen
   if (path === '/api/admin/people' && method === 'GET') return listPeople(env, user);

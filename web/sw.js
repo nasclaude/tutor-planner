@@ -41,15 +41,24 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : '' };
   }
+  // The number for the app icon (past lessons still to mark), when the server sends it.
+  const nav = self.navigator;
+  const badge =
+    typeof data.badge === 'number' && nav && 'setAppBadge' in nav
+      ? (data.badge > 0 ? nav.setAppBadge(data.badge) : nav.clearAppBadge()).catch(() => {})
+      : Promise.resolve();
   // iOS requires every push to show a notification.
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Tutor Planner', {
-      body: data.body || '',
-      tag: data.tag,
-      data: { url: data.url || '#/' },
-      icon: 'icons/icon-192.png',
-      badge: 'icons/icon-192.png',
-    }),
+    Promise.all([
+      self.registration.showNotification(data.title || 'Tutor Planner', {
+        body: data.body || '',
+        tag: data.tag,
+        data: { url: data.url || '#/' },
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png',
+      }),
+      badge,
+    ]),
   );
 });
 

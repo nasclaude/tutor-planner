@@ -2,6 +2,8 @@ import { MINUTE, DAY } from './util.js';
 import { getSettings } from './settings.js';
 import { sendToDevices } from './push.js';
 import { MAX_OFFSET_MIN } from './crud.js';
+import { formatTime } from './localtime.js';
+import { runSummaries, unmarkedCount } from './summary.js';
 
 // A reminder may go out up to this long after its planned time (covers a late or skipped cron run).
 // Older ones are skipped, so an item added at the last minute doesn't fire a burst of stale reminders.
@@ -64,15 +66,6 @@ export function untilText(ms, lang = 'en') {
   return h === 1 ? `1 ${u.hour}` : `${h} ${u.hours}`;
 }
 
-function formatTime(ms, timeZone) {
-  const options = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
-  try {
-    return new Intl.DateTimeFormat('en-GB', { ...options, timeZone }).format(ms);
-  } catch {
-    return new Intl.DateTimeFormat('en-GB', { ...options, timeZone: 'UTC' }).format(ms);
-  }
-}
-
 export function buildReminder(lesson, now, timeZone, lang = 'en') {
   const T = text(lang);
   const time = formatTime(lesson.start_at, timeZone);
@@ -124,6 +117,13 @@ export async function runReminders(env, now = Date.now()) {
     if (!settingsCache.has(userId)) settingsCache.set(userId, await getSettings(env, userId));
     return settingsCache.get(userId);
   };
+  // Every notification also carries the number for the app icon (unless that is switched off).
+  const badges = new Map();
+  const badgeOf = async (userId) => {
+    if (!(await settingsOf(userId)).app_badge) return undefined;
+    if (!badges.has(userId)) badges.set(userId, await unmarkedCount(env, userId, now));
+    return badges.get(userId);
+  };
 
   if (users.size) {
     const { results: lessons } = await env.DB.prepare(
@@ -147,7 +147,7 @@ export async function runReminders(env, now = Date.now()) {
       const offset = dueOffset(lesson.start_at, offsetsOf(lesson, settings.reminder_offsets), now);
       if (offset == null || !(await claim(env, lesson.id, lesson.start_at, offset, now))) continue;
       const ttl = Math.max(300, Math.floor((lesson.start_at + 30 * MINUTE - now) / 1000));
-      const payload = buildReminder(lesson, now, settings.timezone, settings.language);
+      const payload = { ...buildReminder(lesson, now, settings.timezone, settings.language), badge: await badgeOf(lesson.user_id) };
       report.sent += (await sendToDevices(env, lesson.user_id, payload, { ttl })).sent;
     }
     for (const event of events) {
@@ -156,15 +156,17 @@ export async function runReminders(env, now = Date.now()) {
       const offset = dueOffset(event.start_at, offsetsOf(event, [0]), now);
       if (offset == null || !(await claim(env, event.id, event.start_at, offset, now))) continue;
       const ttl = Math.max(300, Math.floor((event.start_at + 30 * MINUTE - now) / 1000));
-      const payload = buildEventReminder(event, now, settings.timezone, settings.language);
+      const payload = { ...buildEventReminder(event, now, settings.timezone, settings.language), badge: await badgeOf(event.user_id) };
       report.sent += (await sendToDevices(env, event.user_id, payload, { ttl })).sent;
     }
+    report.summaries = await runSummaries(env, now, (userId) => users.has(userId), settingsOf);
   }
 
   if (new Date(now).getUTCMinutes() === 0) {
     await env.DB.batch([
       env.DB.prepare('DELETE FROM reminder_log WHERE sent_at < ?').bind(now - 60 * DAY),
       env.DB.prepare('DELETE FROM login_attempts WHERE at < ?').bind(now - DAY),
+      env.DB.prepare('DELETE FROM summary_log WHERE sent_at < ?').bind(now - 60 * DAY),
     ]);
   }
   return report;

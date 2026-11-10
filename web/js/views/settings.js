@@ -6,11 +6,13 @@ import { state, saveSettings } from '../store.js';
 import { fmtMinutes, fmtOffset, fmtDay, dateKey } from '../time.js';
 import { pageHeader, field, avatar, APP_VERSION } from '../components.js';
 import { toast, rerender, openSheet, confirmSheet, formValues } from '../ui.js';
-import { pushEnvironment, currentSubscription, enablePush, disablePush, sendTestPush } from '../push.js';
+import { pushEnvironment, currentSubscription, enablePush, disablePush, sendTestPush, updateAppBadge } from '../push.js';
 import { languageSwitch } from './login.js';
 import { prettyCode } from './join.js';
 
 const OFFSET_CHOICES = [1440, 240, 180, 120, 60, 30, 15];
+// Morning summary times: 05:00, 05:30 … 12:00.
+const SUMMARY_TIMES = Array.from({ length: 15 }, (_, i) => `${String(5 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
 const strong = (text) => html`<strong>${text}</strong>`;
 
 async function renderPushStatus(el) {
@@ -162,6 +164,9 @@ export default {
     const { reminder_offsets: offsets, default_duration: duration, currency, timezone } = state.settings;
     const durations = [...new Set([30, 45, 60, 90, 120, duration])].sort((a, b) => a - b);
     const sorted = [...offsets].sort((a, b) => b - a);
+    const summaryAt = state.settings.daily_summary || '';
+    const summaryTimes = summaryAt && !SUMMARY_TIMES.includes(summaryAt) ? [...SUMMARY_TIMES, summaryAt].sort() : SUMMARY_TIMES;
+    const badgeOn = state.settings.app_badge !== false;
     return html`
       ${pageHeader({ title: t('settings.title') })}
 
@@ -192,6 +197,27 @@ export default {
       <section class="card pad">
         <h2 class="card-title">${icon('bell')} ${t('settings.notifications')}</h2>
         <div data-push-status><p class="muted small">${t('settings.checking')}</p></div>
+      </section>
+
+      <section class="card pad stack" data-summary-card>
+        <h2 class="card-title">${icon('sun')} ${t('summary.title')}</h2>
+        <p class="muted small">${t('summary.text')}</p>
+        ${field(
+          t('summary.time'),
+          html`<select name="daily_summary" data-setting>
+            <option value="" ${summaryAt ? '' : 'selected'}>${t('summary.off')}</option>
+            ${summaryTimes.map((tm) => html`<option value="${tm}" ${tm === summaryAt ? 'selected' : ''}>${tm}</option>`)}
+          </select>`,
+        )}
+        <button type="button" class="btn align-start" data-action="summary-now">${t('summary.sendNow')}</button>
+        <div class="setting-row">
+          <div>
+            <strong>${t('appBadge.title')}</strong>
+            <p class="muted small">${t('appBadge.text')}</p>
+          </div>
+          <button type="button" class="switch ${badgeOn ? 'on' : ''}" role="switch" aria-checked="${badgeOn ? 'true' : 'false'}"
+            aria-label="${t('appBadge.title')}" data-action="toggle-badge"><span></span></button>
+        </div>
       </section>
 
       <section class="card pad">
@@ -254,6 +280,16 @@ export default {
       await disablePush();
       rerender();
       toast(t('settings.toastOff'));
+    },
+    async 'summary-now'() {
+      const result = await sendTestPush('summary');
+      if (result.sent) toast(t('summary.sent'));
+      else toast(t('settings.testRefused', { status: result.errors?.[0]?.status ?? '?', error: result.errors?.[0]?.error || '—' }), { error: true });
+    },
+    async 'toggle-badge'() {
+      await saveSettings({ app_badge: state.settings.app_badge === false });
+      rerender();
+      updateAppBadge();
     },
     async 'push-test'() {
       const result = await sendTestPush();

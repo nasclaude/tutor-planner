@@ -47,6 +47,23 @@ export const SETTINGS = {
       return v;
     },
   },
+  // Morning summary: the local time ("07:30") for one notification with the day's plan, or "" for off.
+  daily_summary: {
+    default: '',
+    parse(v) {
+      const s = String(v ?? '').trim();
+      if (s && !/^([01]\d|2[0-3]):[0-5]\d$/.test(s)) throw new HttpError(400, 'The summary time must look like 07:30');
+      return s;
+    },
+  },
+  // Show on the app icon how many past lessons are still waiting to be marked done or cancelled.
+  app_badge: {
+    default: true,
+    parse(v) {
+      if (typeof v !== 'boolean') throw new HttpError(400, 'app_badge must be true or false');
+      return v;
+    },
+  },
   // Used to show local times in notifications. The app sends the phone's time zone.
   timezone: {
     default: 'UTC',

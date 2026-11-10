@@ -1,7 +1,7 @@
 import { html } from '../html.js';
 import { icon } from '../icons.js';
 import { t, cap } from '../i18n.js';
-import { state, student, lessonEnd, nextLesson, agenda, notifies } from '../store.js';
+import { state, student, lessonEnd, nextLesson, agenda, notifies, needsMarking } from '../store.js';
 import { fmtTime, fmtDayLong, fmtRelative, dayLabel, startOfDay, addDays, dateKey } from '../time.js';
 import { pageHeader, agendaRow, emptyState, fab, deviceWarning, offlineBanner } from '../components.js';
 import { lessonActions } from '../actions.js';
@@ -71,7 +71,7 @@ export default {
     const dayStart = startOfDay(now);
     const tomorrow = addDays(dayStart, 1);
     const next = nextLesson(null, now);
-    const attention = state.lessons.filter((l) => l.status === 'scheduled' && lessonEnd(l) <= now).reverse();
+    const attention = needsMarking(now).reverse();
     const today = agenda(dayStart, tomorrow);
     const days = [];
     const scheduled = (item) => item.status === 'scheduled';

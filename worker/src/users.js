@@ -52,7 +52,7 @@ export async function removeUser(env, admin, id) {
   const db = env.DB;
   await db.batch([
     db.prepare('DELETE FROM reminder_log WHERE item_id IN (SELECT id FROM lessons WHERE user_id = ? UNION SELECT id FROM events WHERE user_id = ?)').bind(user.id, user.id),
-    ...['homework', 'grades', 'lessons', 'events', 'students', 'push_subscriptions', 'user_settings'].map((t) =>
+    ...['homework', 'grades', 'lessons', 'events', 'students', 'push_subscriptions', 'user_settings', 'summary_log'].map((t) =>
       db.prepare(`DELETE FROM ${t} WHERE user_id = ?`).bind(user.id),
     ),
     db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),

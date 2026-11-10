@@ -1,6 +1,6 @@
 // Turning lesson notifications on and off for this device.
 import { api } from './api.js';
-import { state } from './store.js';
+import { state, needsMarking } from './store.js';
 import { t } from './i18n.js';
 
 const isIOS = () =>
@@ -78,10 +78,25 @@ export async function disablePush() {
   await sub.unsubscribe();
 }
 
-export async function sendTestPush() {
+// kind: 'test' (a test notification) or 'summary' (today's morning summary, right now).
+export async function sendTestPush(kind = 'test') {
   const sub = await currentSubscription();
   if (!sub) throw new Error(t('push.notOn'));
-  return api('POST', '/api/push/test', { endpoint: sub.endpoint });
+  return api('POST', kind === 'summary' ? '/api/push/summary' : '/api/push/test', { endpoint: sub.endpoint });
+}
+
+// The number on the Home Screen icon: past lessons still waiting to be marked. iPhone shows it
+// only for apps added to the Home Screen with notifications allowed. Notifications carry it too
+// (see sw.js), so it stays right while the app is closed.
+export function updateAppBadge(count = null) {
+  if (!('setAppBadge' in navigator)) return;
+  try {
+    const allowed = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    const n = count ?? (allowed && state.loaded && state.settings.app_badge !== false ? needsMarking().length : 0);
+    (n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+  } catch {
+    // not supported here
+  }
 }
 
 // On start-up: make sure the server still knows this device and its time zone.

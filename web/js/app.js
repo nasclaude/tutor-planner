@@ -6,7 +6,7 @@ import { t, getLang, setLang } from './i18n.js';
 import { state, loadData, loadCached, resetState, saveSettings } from './store.js';
 import { toast, clearToast, closeSheet, sheetOpen, nav } from './ui.js';
 import { sharedActions } from './actions.js';
-import { syncDevice } from './push.js';
+import { syncDevice, updateAppBadge } from './push.js';
 import login from './views/login.js';
 import setupView from './views/setup.js';
 import joinView from './views/join.js';
@@ -114,6 +114,7 @@ function render() {
   document.title = title ? `${title} · Tutor Planner` : 'Tutor Planner';
   view.mounted?.(app, ctx);
   window.scrollTo(0, sameScreen ? scrollY : 0);
+  if (state.loaded) updateAppBadge();
 }
 
 const isEditing = () => {
@@ -230,6 +231,7 @@ window.addEventListener('tp:stale', () => {
 window.addEventListener('tp:logout', () => {
   closeSheet();
   resetState();
+  updateAppBadge(0);
   render();
   checkSetup();
 });

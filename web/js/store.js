@@ -4,7 +4,15 @@ import { MINUTE } from './time.js';
 
 const CACHE_KEY = 'tp.cache.v1';
 
-export const DEFAULT_SETTINGS = { reminder_offsets: [180, 120, 60], currency: '€', default_duration: 60, language: 'en', timezone: 'UTC' };
+export const DEFAULT_SETTINGS = {
+  reminder_offsets: [180, 120, 60],
+  currency: '€',
+  default_duration: 60,
+  language: 'en',
+  timezone: 'UTC',
+  daily_summary: '', // morning summary time ("07:30"), "" = off
+  app_badge: true, // number on the app icon: past lessons still to mark
+};
 
 const empty = () => ({
   loaded: false,
@@ -156,6 +164,9 @@ export function findOverlap(start, durationMin, excludeId = null) {
   const end = start + durationMin * MINUTE;
   return state.lessons.find((l) => l.id !== excludeId && l.status === 'scheduled' && l.start_at < end && lessonEnd(l) > start);
 }
+
+// Past lessons never marked done or cancelled ("Did it happen?" on Today, the number on the app icon).
+export const needsMarking = (now = Date.now()) => state.lessons.filter((l) => l.status === 'scheduled' && lessonEnd(l) <= now);
 
 export function unpaidLessons(studentId = null) {
   return state.lessons.filter(
