@@ -6,6 +6,7 @@ import { getSettings, updateSettings } from './settings.js';
 import { getVapid, isPushEndpoint, sendToDevices, countDevices } from './push.js';
 import { runReminders, testMessage } from './reminders.js';
 import { summaryFor, unmarkedCount } from './summary.js';
+import { listPhotos, addPhoto, getPhoto, deletePhoto, photoCounts, deleteLessonPhotos } from './photos.js';
 
 function corsHeaders(env, origin) {
   const allowed = (env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -20,13 +21,22 @@ function corsHeaders(env, origin) {
 }
 
 async function getData(env, user) {
-  const [rows, settings, vapid, devices] = await Promise.all([
+  const [rows, settings, vapid, devices, photos] = await Promise.all([
     listAll(env, user.id),
     getSettings(env, user.id),
     getVapid(env),
     countDevices(env, user.id),
+    photoCounts(env, user.id),
   ]);
-  return { ...rows, settings, me: publicUser(user), vapidPublicKey: vapid?.publicKey ?? null, devices, serverTime: Date.now() };
+  return {
+    ...rows,
+    settings,
+    me: publicUser(user),
+    vapidPublicKey: vapid?.publicKey ?? null,
+    devices,
+    photoCounts: photos,
+    serverTime: Date.now(),
+  };
 }
 
 // A phone or browser registers for notifications. If it was registered by someone else before
@@ -105,6 +115,14 @@ async function route(request, env) {
   if (person && person[2] && method === 'POST') return resetPassword(env, user, person[1]);
   if (person && !person[2] && method === 'DELETE') return removeUser(env, user, person[1]);
 
+  // Photos on a lesson
+  const lessonPhotos = path.match(/^\/api\/lessons\/([\w-]+)\/photos$/);
+  if (lessonPhotos && method === 'GET') return listPhotos(env, user, lessonPhotos[1]);
+  if (lessonPhotos && method === 'POST') return addPhoto(env, user, lessonPhotos[1], await readJson(request));
+  const photo = path.match(/^\/api\/photos\/([\w-]+)$/);
+  if (photo && method === 'GET') return getPhoto(env, user, photo[1], url.searchParams.get('size') === 'thumb' ? 'thumb' : 'full');
+  if (photo && method === 'DELETE') return deletePhoto(env, user, photo[1]);
+
   // A repeating series of lessons or reminders, created in one go.
   const bulk = path.match(/^\/api\/(lessons|events)\/bulk$/);
   if (bulk && method === 'POST') {
@@ -118,7 +136,15 @@ async function route(request, env) {
     if (!id && method === 'POST') return json(await createRow(env, table, await readJson(request), user.id), 201);
     if (id && method === 'PATCH') return json(await updateRow(env, table, id, await readJson(request), user.id));
     if (id && method === 'DELETE') {
+      // A student's lessons are deleted with them; deleted lessons take their photos along.
+      const studentLessons =
+        table === 'students'
+          ? (await env.DB.prepare('SELECT id FROM lessons WHERE student_id = ? AND user_id = ?').bind(id, user.id).all()).results.map((r) => r.id)
+          : [];
       const deleted = await deleteRow(env, table, id, user.id, { following: url.searchParams.get('following') === '1' });
+      const gone = table === 'lessons' ? deleted : studentLessons;
+      // If this fails, the daily clean-up removes them later; the lesson itself is already deleted.
+      await deleteLessonPhotos(env, user.id, gone).catch((err) => console.error('photo clean-up', err));
       return json({ ok: true, deleted });
     }
   }

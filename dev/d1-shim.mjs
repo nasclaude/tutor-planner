@@ -9,11 +9,22 @@ const normalize = (params) =>
 const plain = (row) => (row ? { ...row } : null);
 const isQuery = (sql) => /^\s*(select|with|pragma)\b/i.test(sql);
 
+// Cloudflare D1's limits, so tests catch queries the real database would refuse. Whether bound values
+// count toward the 100 KB statement limit isn't documented, so they are counted here to be safe.
+const MAX_STATEMENT = 100_000;
+const MAX_PARAMS = 100;
+function checkLimits(sql, params) {
+  if (params.length > MAX_PARAMS) throw new Error(`D1 limit: ${params.length} bound parameters (max ${MAX_PARAMS})`);
+  const size = sql.length + params.reduce((n, p) => n + (typeof p === 'string' ? p.length : 8), 0);
+  if (size > MAX_STATEMENT) throw new Error(`D1 limit: statement of ${size} bytes (max ${MAX_STATEMENT})`);
+}
+
 class Statement {
   constructor(db, sql, params = []) {
     this.db = db;
     this.sql = sql;
     this.params = params;
+    checkLimits(sql, params);
   }
   bind(...params) {
     return new Statement(this.db, this.sql, params);

@@ -35,9 +35,12 @@ function devVapidKey() {
 
 const DB = createD1(args.includes('--memory') ? ':memory:' : path.join(ROOT, 'dev', 'dev.db'));
 await applyMigrations(DB, path.join(ROOT, 'worker', 'migrations'));
+const PHOTOS = createD1(args.includes('--memory') ? ':memory:' : path.join(ROOT, 'dev', 'photos.db'));
+await applyMigrations(PHOTOS, path.join(ROOT, 'worker', 'migrations-photos'));
 
 const env = {
   DB,
+  PHOTOS,
   SETUP_CODE: process.env.SETUP_CODE || 'dev',
   PASSWORD_PEPPER: 'local-dev-pepper',
   SESSION_SECRET: 'local-dev-session-secret',

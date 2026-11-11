@@ -1,11 +1,11 @@
 // Small reusable pieces of markup.
 import { html } from './html.js';
 import { icon } from './icons.js';
-import { t } from './i18n.js';
+import { t, tn } from './i18n.js';
 import { state, student, notifies, reminderTimes } from './store.js';
 import { fmtTime, fmtMinutes, fmtDayMonth, fmtDay, fmtOffset, fromKeys, sameDay, dayLabel } from './time.js';
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 
 const PREFIX_CURRENCIES = ['$', '£', '€', '¥', '₹'];
 
@@ -105,6 +105,12 @@ export function lessonBadges(l, { check = false } = {}) {
   return out;
 }
 
+// A camera and the number of photos, on lessons that have some.
+function photoMark(l) {
+  const n = state.photoCounts?.[l.id];
+  return n ? html`<span class="badge photo-badge" title="${tn('photos.count', n)}" aria-label="${tn('photos.count', n)}">${icon('camera')}${n}</span>` : '';
+}
+
 // Under the time in a row: a bell when notifications are on, and the length if there is one.
 function rowMeta(item, minutes) {
   const bell = notifies(item) && item.status === 'scheduled';
@@ -132,7 +138,7 @@ export function lessonRow(l, { date = false, showStudent = true, check = false }
       <a class="row lesson-row is-${l.status}" href="${href}">
         <div class="row-time">${time}</div>
         <div class="row-main">${main}</div>
-        <div class="row-end">${lessonBadges(l)}</div>
+        <div class="row-end">${photoMark(l)}${lessonBadges(l)}</div>
       </a>`;
   }
   const done = l.status === 'completed';
@@ -140,7 +146,7 @@ export function lessonRow(l, { date = false, showStudent = true, check = false }
     <div class="row lesson-row is-${l.status}">
       <a class="row-time" href="${href}">${time}</a>
       <a class="row-main" href="${href}">${main}</a>
-      <div class="row-end">${lessonBadges(l, { check: true })}</div>
+      <div class="row-end">${photoMark(l)}${lessonBadges(l, { check: true })}</div>
       ${l.status === 'cancelled'
         ? html`<span class="check-spacer" aria-hidden="true"></span>`
         : html`<button type="button" class="check-btn ${done ? 'on' : ''}" data-action="lesson-done" data-id="${l.id}"

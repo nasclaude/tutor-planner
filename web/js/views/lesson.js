@@ -8,6 +8,7 @@ import {
   reminderPicker, reminderSummary, noPhoneWarning, moveChips,
 } from '../components.js';
 import { lessonActions } from '../actions.js';
+import { photosCard, mountPhotos } from '../photos.js';
 import { toast, rerender, formValues } from '../ui.js';
 
 function timing(l, now) {
@@ -90,6 +91,8 @@ export default {
         </form>
       </section>
 
+      ${photosCard(l.id)}
+
       <section class="card pad">
         <h2 class="card-title">${icon('clipboard')} ${t('lesson.homework')}</h2>
         ${stillOpen.length ? html`<h3 class="sub-title">${t('lesson.stillOpen')}</h3><div class="list">${stillOpen.map((h) => homeworkRow(h))}</div>` : ''}
@@ -104,6 +107,7 @@ export default {
       <button type="button" class="btn block danger-ghost" data-action="delete-lesson">${icon('trash')} ${t('lesson.delete')}</button>`;
   },
   mounted(root, ctx) {
+    mountPhotos(root.querySelector('[data-photos]'));
     // Save notes automatically when you leave the box, so nothing typed gets lost.
     const box = root.querySelector('form[data-form=notes] textarea');
     box?.addEventListener('change', async () => {

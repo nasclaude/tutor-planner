@@ -1,6 +1,7 @@
 // The owner's "People" screen: accounts, invitations, password resets and removal.
 import { HttpError, json, readJson } from './util.js';
 import { requireAdmin, createInvite, hashPassword, newTemporaryPassword, normalizeInviteCode } from './auth.js';
+import { deleteUserPhotos } from './photos.js';
 
 export async function listPeople(env, admin) {
   requireAdmin(admin);
@@ -57,5 +58,7 @@ export async function removeUser(env, admin, id) {
     ),
     db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
+  // If this fails, the daily clean-up removes the photos later (their lessons are already gone).
+  await deleteUserPhotos(env, user.id).catch((err) => console.error('photo clean-up', err));
   return json({ ok: true });
 }

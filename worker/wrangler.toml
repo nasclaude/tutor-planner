@@ -12,6 +12,13 @@ database_name = "tutor-planner"
 database_id = "4e3d62d8-7138-4065-9d62-e0ab76e0b55a"
 migrations_dir = "migrations"
 
+# Lesson photos, in their own free database so the main one stays small (each free D1 database holds 500 MB).
+[[d1_databases]]
+binding = "PHOTOS"
+database_name = "tutor-planner-photos"
+database_id = "275e5729-02b4-4ca0-8d3c-e640ab193aec"
+migrations_dir = "migrations-photos"
+
 [vars]
 # The GitHub Pages site (and local dev) allowed to call this API.
 ALLOWED_ORIGINS = "https://nasclaude.github.io,http://localhost:8080"

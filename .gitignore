@@ -4,5 +4,5 @@ node_modules/
 .DS_Store
 
 # local preview data and keys
-dev/dev.db*
+dev/*.db*
 dev/.vapid.json

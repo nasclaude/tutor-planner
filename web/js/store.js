@@ -26,6 +26,7 @@ const empty = () => ({
   settings: { ...DEFAULT_SETTINGS },
   vapidPublicKey: null,
   devices: 0,
+  photoCounts: {}, // lesson id -> number of photos
   me: null, // { id, name, username, is_admin, must_change_password }
   needsSetup: false, // no owner account yet: show the first-time setup screen
 });
@@ -41,14 +42,15 @@ function apply(data) {
   state.settings = { ...DEFAULT_SETTINGS, ...data.settings };
   state.vapidPublicKey = data.vapidPublicKey ?? null;
   state.devices = data.devices ?? 0;
+  state.photoCounts = data.photoCounts ?? {};
   state.me = data.me ?? null;
   state.loaded = true;
 }
 
 function persist() {
   try {
-    const { students, lessons, grades, homework, events, settings, vapidPublicKey, devices, me } = state;
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ students, lessons, grades, homework, events, settings, vapidPublicKey, devices, me }));
+    const { students, lessons, grades, homework, events, settings, vapidPublicKey, devices, photoCounts, me } = state;
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ students, lessons, grades, homework, events, settings, vapidPublicKey, devices, photoCounts, me }));
   } catch {
     // storage full or unavailable: the app still works online
   }

@@ -6,14 +6,18 @@ import worker from '../src/index.js';
 import { createToken, createUser, countUsers } from '../src/auth.js';
 
 const migrations = path.resolve(fileURLToPath(import.meta.url), '../../migrations');
+const photoMigrations = path.resolve(fileURLToPath(import.meta.url), '../../migrations-photos');
 
 export async function makeEnv(overrides = {}) {
   const DB = createD1(':memory:');
   await applyMigrations(DB, migrations);
+  const PHOTOS = createD1(':memory:');
+  await applyMigrations(PHOTOS, photoMigrations);
   const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
   const { d, x, y } = privateKey.export({ format: 'jwk' });
   return {
     DB,
+    PHOTOS,
     SETUP_CODE: 'setup-code',
     PASSWORD_PEPPER: 'test-pepper',
     SESSION_SECRET: 'test-session-secret',

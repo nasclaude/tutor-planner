@@ -4,6 +4,7 @@ import { sendToDevices } from './push.js';
 import { MAX_OFFSET_MIN } from './crud.js';
 import { formatTime } from './localtime.js';
 import { runSummaries, unmarkedCount } from './summary.js';
+import { cleanupOrphanPhotos } from './photos.js';
 
 // A reminder may go out up to this long after its planned time (covers a late or skipped cron run).
 // Older ones are skipped, so an item added at the last minute doesn't fire a burst of stale reminders.
@@ -168,6 +169,7 @@ export async function runReminders(env, now = Date.now()) {
       env.DB.prepare('DELETE FROM login_attempts WHERE at < ?').bind(now - DAY),
       env.DB.prepare('DELETE FROM summary_log WHERE sent_at < ?').bind(now - 60 * DAY),
     ]);
+    if (new Date(now).getUTCHours() === 3) report.orphanPhotos = await cleanupOrphanPhotos(env).catch((err) => console.error(err));
   }
   return report;
 }
